@@ -4,22 +4,28 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#define RX_PIN 4  // Pino de recepção
-#define TX_PIN 2  // Pino de transmissão
-#define OLED_RESET 22 // Pino de reset do OLED
+#define RX_PIN 4         // Pino de recepção
+#define TX_PIN 2         // Pino de transmissão
+#define BUTTON_PIN 14    // Pino do botão
+#define OLED_RESET 22    // Pino de reset do OLED
 #define SCREEN_WIDTH 128 // Largura da tela OLED
 #define SCREEN_HEIGHT 64 // Altura da tela OLED
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
 RCSwitch mySwitch = RCSwitch();
+
+unsigned long receivedValue = 0; // Variável para armazenar o valor recebido
+int receivedBitLength = 0;       // Comprimento do sinal recebido
+int receivedProtocol = 0;        // Protocolo do sinal recebido
 
 void setup() {
   Serial.begin(9600);
 
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Configura o pino do botão como entrada com pull-up
+
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Inicializa o display OLED
     Serial.println(F("Falha ao iniciar o display OLED"));
-    for(;;);
+    while (1); // Fica preso aqui se houver falha no display
   }
 
   display.clearDisplay();
@@ -34,18 +40,18 @@ void setup() {
   delay(2000);
   display.clearDisplay();
 
-  ELECHOUSE_cc1101.Init();
-  ELECHOUSE_cc1101.setMHZ(433.92);
-  ELECHOUSE_cc1101.SetRx();
+  ELECHOUSE_cc1101.Init(); // Inicializa o módulo CC1101
+  ELECHOUSE_cc1101.setMHZ(433.92); // Define a frequência em 433.92MHz
+  ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber
 
-  mySwitch.enableReceive(RX_PIN);
-  mySwitch.enableTransmit(TX_PIN);
+  mySwitch.enableReceive(RX_PIN); // Habilita a recepção no pino RX
+  mySwitch.enableTransmit(TX_PIN); // Habilita a transmissão no pino TX
 }
 
 void loop() {
-  if (mySwitch.available()) {
-    unsigned long receivedValue = mySwitch.getReceivedValue();
-    if (receivedValue != 0) {
+  if (mySwitch.available()) { // Se houver dados disponíveis para leitura
+    receivedValue = mySwitch.getReceivedValue(); // Lê o valor recebido
+    if (receivedValue != 0) { // Se o valor recebido for diferente de 0
       display.clearDisplay();
       display.setCursor(0, 0);
       display.println("Received Signal:");
@@ -53,38 +59,45 @@ void loop() {
       display.println(receivedValue);
       display.display();
 
-      int receivedBitLength = mySwitch.getReceivedBitlength();
-      unsigned int* rawSignal = mySwitch.getReceivedRawdata();
-      int receivedProtocol = mySwitch.getReceivedProtocol();
+      receivedBitLength = mySwitch.getReceivedBitlength(); // Obtém o comprimento do sinal recebido
+      unsigned int* rawSignal = mySwitch.getReceivedRawdata(); // Obtém os dados brutos do sinal
+      receivedProtocol = mySwitch.getReceivedProtocol(); // Obtém o protocolo do sinal recebido
 
-      mySwitch.resetAvailable();
-      mySwitch.disableReceive();
-      delay(100);
-      mySwitch.enableTransmit(TX_PIN);
-      ELECHOUSE_cc1101.SetTx();
-
-      delay(3000);
-      display.clearDisplay();
-      display.setCursor(0, 20);
-      display.println("Sending..");
-
-      mySwitch.setProtocol(receivedProtocol);
-      mySwitch.send(receivedValue, receivedBitLength);
-
-      delay(500);
-      display.clearDisplay();
-      display.setCursor(0, 0);
-      display.println("Received Signal:");
-      display.setCursor(0, 10);
-      display.println(receivedValue);
-      display.setCursor(0, 20);
-      display.println("OK");
-      display.display();
-
-      ELECHOUSE_cc1101.SetRx();
-      mySwitch.disableTransmit();
-      delay(100);
-      mySwitch.enableReceive(RX_PIN);
+      mySwitch.resetAvailable(); // Reinicia o buffer de dados recebidos
     }
+  }
+
+  if (digitalRead(BUTTON_PIN) == LOW && receivedValue != 0) { // Se o botão for pressionado e houver um valor recebido
+    mySwitch.disableReceive(); // Desabilita a recepção
+    delay(100);
+    mySwitch.enableTransmit(TX_PIN); // Habilita a transmissão
+    ELECHOUSE_cc1101.SetTx(); // Configura o módulo CC1101 para transmitir
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Received Signal:");
+    display.setCursor(0, 10);
+    display.println(receivedValue);
+    display.setCursor(0, 20);
+    display.println("Sending...");
+    display.display();
+
+    mySwitch.setProtocol(receivedProtocol); // Configura o protocolo para o valor recebido
+    mySwitch.send(receivedValue, receivedBitLength); // Envia o valor recebido com o comprimento do sinal
+
+    delay(500);
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println("Received Signal:");
+    display.setCursor(0, 10);
+    display.println(receivedValue);
+    display.setCursor(0, 20);
+    display.println("OK");
+    display.display();
+
+    ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber novamente
+    mySwitch.disableTransmit(); // Desabilita a transmissão
+    delay(100);
+    mySwitch.enableReceive(RX_PIN); // Habilita a recepção
   }
 }
