@@ -7,9 +7,10 @@
 #define RX_PIN 4         // Pino de recepção
 #define TX_PIN 2         // Pino de transmissão
 #define BUTTON_PIN 14    // Pino do botão
+#define FREQUENCY_SWITCH_PIN 13 // Pino do interruptor para mudar a frequência
 #define OLED_RESET 22    // Pino de reset do OLED
 #define SCREEN_WIDTH 128 // Largura da tela OLED
-#define SCREEN_HEIGHT 64 // Altura da tela OLED
+#define SCREEN_HEIGHT 32 // Altura da tela OLED
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 RCSwitch mySwitch = RCSwitch();
@@ -22,6 +23,7 @@ void setup() {
   Serial.begin(9600);
 
   pinMode(BUTTON_PIN, INPUT_PULLUP); // Configura o pino do botão como entrada com pull-up
+  pinMode(FREQUENCY_SWITCH_PIN, INPUT_PULLUP); // Configura o pino do seletor de frequencia
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Inicializa o display OLED
     Serial.println(F("Falha ao iniciar o display OLED"));
@@ -43,6 +45,10 @@ void setup() {
   ELECHOUSE_cc1101.Init(); // Inicializa o módulo CC1101
   ELECHOUSE_cc1101.setMHZ(433.92); // Define a frequência em 433.92MHz
   ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber
+
+      //Criar um if else para setar a frequência 433 ou 315 com base em um interruptor
+      // assim quando o sistema da o boot ele le se o interruptor esta ou não ligado
+      //se esta ele seta a 315 se nao ele mantem 433
 
   mySwitch.enableReceive(RX_PIN); // Habilita a recepção no pino RX
   mySwitch.enableTransmit(TX_PIN); // Habilita a transmissão no pino TX
@@ -100,4 +106,11 @@ void loop() {
     delay(100);
     mySwitch.enableReceive(RX_PIN); // Habilita a recepção
   }
+
+  if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
+    ELECHOUSE_cc1101.setMHZ(315); // Muda a frequência para 315MHz
+  } else {
+    ELECHOUSE_cc1101.setMHZ(433.92); // Mantém a frequência em 433.92MHz
+  }
+  
 }
