@@ -43,12 +43,16 @@ void setup() {
   display.clearDisplay();
 
   ELECHOUSE_cc1101.Init(); // Inicializa o módulo CC1101
-  ELECHOUSE_cc1101.setMHZ(433.92); // Define a frequência em 433.92MHz
+  //ELECHOUSE_cc1101.setMHZ(433.92); // Define a frequência em 433.92MHz
+  
+  if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) { //O botão escolhe a frequencia
+    ELECHOUSE_cc1101.setMHZ(315); // Muda a frequência para 315MHz
+  } else {
+    ELECHOUSE_cc1101.setMHZ(433.92); // Mantém a frequência em 433.92MHz
+  }
+  
   ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber
 
-      //Criar um if else para setar a frequência 433 ou 315 com base em um interruptor
-      // assim quando o sistema da o boot ele le se o interruptor esta ou não ligado
-      //se esta ele seta a 315 se nao ele mantem 433
 
   mySwitch.enableReceive(RX_PIN); // Habilita a recepção no pino RX
   mySwitch.enableTransmit(TX_PIN); // Habilita a transmissão no pino TX
@@ -109,8 +113,10 @@ void loop() {
 
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
     ELECHOUSE_cc1101.setMHZ(315); // Muda a frequência para 315MHz
+    ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber TEMP**
   } else {
     ELECHOUSE_cc1101.setMHZ(433.92); // Mantém a frequência em 433.92MHz
+    ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber TEMP**
   }
   
 }
