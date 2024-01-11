@@ -113,10 +113,8 @@ void loop() {
 
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
     ELECHOUSE_cc1101.setMHZ(315); // Muda a frequência para 315MHz
-    ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber TEMP**
   } else {
     ELECHOUSE_cc1101.setMHZ(433.92); // Mantém a frequência em 433.92MHz
-    ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber TEMP**
   }
   
 }
