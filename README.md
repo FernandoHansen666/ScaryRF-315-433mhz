@@ -18,3 +18,7 @@ O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC110
 - Mostrar dados em um display OLED.
 - Mandar de volta sinais RF na mesma frequência ou em outra.
 - Futuras funções com os 4 botões.
+
+<img src="Placa.jpg" alt="Placa" width="300"><img src="Placa1.jpg" alt="Placa1" width="338">
+
+
