@@ -7,6 +7,8 @@
 #define RX_PIN 4         // Pino de recepção
 #define TX_PIN 2         // Pino de transmissão
 #define BUTTON_PIN 14    // Pino do botão
+#define BUTTON_PIN_DIR 27    // Pino do botão
+#define BUTTON_PIN_UP 26    // Pino do botão
 #define FREQUENCY_SWITCH_PIN 13 // Pino do interruptor para mudar a frequência
 #define OLED_RESET 22    // Pino de reset do OLED
 #define SCREEN_WIDTH 128 // Largura da tela OLED
@@ -18,12 +20,23 @@ RCSwitch mySwitch = RCSwitch();
 unsigned long receivedValue = 0; // Variável para armazenar o valor recebido
 int receivedBitLength = 0;       // Comprimento do sinal recebido
 int receivedProtocol = 0;        // Protocolo do sinal recebido
+const int rssi_threshold = -75; // Limiar de RSSI para considerar um sinal como forte o suficiente (Analizador de frequencia)
+
+static const uint32_t subghz_frequency_list[] = {
+    /* Lista de frequências em MHz */
+    300000000, 303875000, 304250000, 310000000, 315000000, 318000000,  // Faixa 300-348 MHz
+    390000000, 418000000, 433075000, 433420000, 433920000, 434420000, 434775000, 438900000,  // Faixa 387-464 MHz
+    868350000, 915000000, 925000000  // Faixa 779-928 MHz
+};
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
-  pinMode(BUTTON_PIN, INPUT_PULLUP); // Configura o pino do botão como entrada com pull-up
+  pinMode(BUTTON_PIN, INPUT_PULLUP); // Configura o pino do botão baixo como entrada com pull-up
   pinMode(FREQUENCY_SWITCH_PIN, INPUT_PULLUP); // Configura o pino do seletor de frequencia
+  pinMode(BUTTON_PIN_UP, INPUT_PULLUP); // Configura o pino do botão cima como entrada com pull-up
+  pinMode(BUTTON_PIN_DIR, INPUT_PULLUP); // Configura o pino do botão direito como entrada com pull-up
+
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Inicializa o display OLED
     Serial.println(F("Falha ao iniciar o display OLED"));
@@ -43,7 +56,7 @@ void setup() {
   display.clearDisplay();
 
   ELECHOUSE_cc1101.Init(); // Inicializa o módulo CC1101
-  //ELECHOUSE_cc1101.setMHZ(433.92); // Define a frequência em 433.92MHz
+
   
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) { //O botão escolhe a frequencia
     ELECHOUSE_cc1101.setMHZ(315); // Muda a frequência para 315MHz
@@ -95,6 +108,7 @@ void loop() {
     mySwitch.setProtocol(receivedProtocol); // Configura o protocolo para o valor recebido
     mySwitch.send(receivedValue, receivedBitLength); // Envia o valor recebido com o comprimento do sinal
 
+
     delay(500);
     display.clearDisplay();
     display.setCursor(0, 0);
@@ -116,5 +130,120 @@ void loop() {
   } else {
     ELECHOUSE_cc1101.setMHZ(433.92); // Mantém a frequência em 433.92MHz
   }
-  
+
+  //FUNÇÃO RANDOM (Futuramente Bruteforce eu acho)______________________
+
+   if (digitalRead(BUTTON_PIN_DIR) == LOW){
+
+    display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Sending Random:");
+  display.display();
+
+  delay(100);
+
+  // Gera uma sequência aleatória de 9 dígitos
+  unsigned long randomValue = 100000000 + random(900000000);
+
+
+       int randomBitLength = 28; // Ajuste conforme necessário 433
+       int randomProtocol = 6;   // Ajuste conforme necessário 433
+       
+  if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
+        // Configura o protocolo e comprimento do sinal
+       randomBitLength = 28; // Ajuste conforme necessário
+       randomProtocol = 1;   // Ajuste conforme necessário
+  }
+
+  mySwitch.disableReceive();
+  delay(100);
+  mySwitch.enableTransmit(TX_PIN);
+  ELECHOUSE_cc1101.SetTx();
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Sending Random:");
+  display.setCursor(0, 10);
+  display.println(randomValue);
+  display.setCursor(0, 20);
+  display.println("Sending...");
+  display.display();
+
+  mySwitch.setProtocol(randomProtocol);
+  mySwitch.send(randomValue, randomBitLength);
+
+  delay(100);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Sending Random:");
+  display.setCursor(0, 10);
+  display.println(randomValue);
+  display.setCursor(0, 20);
+  display.println("OK");
+  display.display();
+
+  ELECHOUSE_cc1101.SetRx();
+  mySwitch.disableTransmit();
+  delay(100);
+  mySwitch.enableReceive(RX_PIN);
+    
+    }
+
+    // Função analizadora de frequencia e potencia _________________________ AOW POTENCIA
+
+   if (digitalRead(BUTTON_PIN_UP) == LOW){
+    while (digitalRead(BUTTON_PIN_UP) == LOW) {
+        // Enquanto o botão de aumento de frequência estiver pressionado
+
+        // Limpa o display e exibe mensagem de análise
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.printf("Analyzing...");
+        display.display();
+
+        int rssi;
+        uint32_t detectedFrequency = 0;
+        int detectedRssi = -100;
+
+        // Varredura Fina: Varre a lista de frequências definida em subghz_frequency_list
+        for (size_t i = 0; i < sizeof(subghz_frequency_list) / sizeof(subghz_frequency_list[0]); i++) {
+            uint32_t frequency = subghz_frequency_list[i];
+
+            // Configura a frequência atual no módulo CC1101
+            ELECHOUSE_cc1101.setMHZ((float)frequency / 1000000.0);
+            ELECHOUSE_cc1101.SetRx();
+            delayMicroseconds(3500);
+            rssi = ELECHOUSE_cc1101.getRssi(); // Obtém o RSSI do sinal recebido
+
+            // Verifica se o sinal é forte o suficiente e se é mais forte do que os sinais anteriores
+            if (rssi >= rssi_threshold && rssi > detectedRssi) {
+                detectedRssi = rssi;
+                detectedFrequency = frequency;
+            }
+        }
+
+        // Se uma Frequência FINE foi detectada, exibe as informações no display OLED
+        if (detectedFrequency != 0) {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.printf("Analyzing...");
+            display.setCursor(0, 10);
+            display.printf("Frequency: %.2fMHz", (float)detectedFrequency / 1000000.0);
+            display.setCursor(0, 20);
+            display.printf("RSSI: %ddBm", detectedRssi);
+            display.display();
+        }
+
+        delay(1000);
+    }
+    ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber novamente
+    mySwitch.disableTransmit(); // Desabilita a transmissão
+    delay(100);
+    mySwitch.enableReceive(RX_PIN); // Habilita a recepção
+   }
+   
+    
 }
+
+    
+  
