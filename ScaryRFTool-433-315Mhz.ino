@@ -37,7 +37,6 @@ void setup() {
   pinMode(BUTTON_PIN_UP, INPUT_PULLUP); // Configura o pino do botão cima como entrada com pull-up
   pinMode(BUTTON_PIN_DIR, INPUT_PULLUP); // Configura o pino do botão direito como entrada com pull-up
 
-
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Inicializa o display OLED
     Serial.println(F("Falha ao iniciar o display OLED"));
     while (1); // Fica preso aqui se houver falha no display
@@ -47,13 +46,14 @@ void setup() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("|--------|");
-  display.println("|Scary-RF|");
-  display.println("|  TOOL  |");
-  display.println("|________|");
+  display.println("      |--------|");
+  display.println("      |Scary-RF|");
+  display.println("      |  TOOL  |");
+  display.println("      |________|");
   display.display();
   delay(2000);
   display.clearDisplay();
+
 
   ELECHOUSE_cc1101.Init(); // Inicializa o módulo CC1101
 
@@ -73,18 +73,24 @@ void setup() {
 
 void loop() {
   if (mySwitch.available()) { // Se houver dados disponíveis para leitura
+    
     receivedValue = mySwitch.getReceivedValue(); // Lê o valor recebido
+    receivedBitLength = mySwitch.getReceivedBitlength(); // Obtém o comprimento do sinal recebido
+    unsigned int* rawSignal = mySwitch.getReceivedRawdata(); // Obtém os dados brutos do sinal
+    receivedProtocol = mySwitch.getReceivedProtocol(); // Obtém o protocolo do sinal recebido
+
+    
     if (receivedValue != 0) { // Se o valor recebido for diferente de 0
       display.clearDisplay();
       display.setCursor(0, 0);
       display.println("Received Signal:");
       display.setCursor(0, 10);
       display.println(receivedValue);
+      display.setCursor(0, 20);
+      display.printf("Bit:%d", receivedBitLength);
+      display.printf("  Ptc:%d", receivedProtocol);
       display.display();
 
-      receivedBitLength = mySwitch.getReceivedBitlength(); // Obtém o comprimento do sinal recebido
-      unsigned int* rawSignal = mySwitch.getReceivedRawdata(); // Obtém os dados brutos do sinal
-      receivedProtocol = mySwitch.getReceivedProtocol(); // Obtém o protocolo do sinal recebido
 
       mySwitch.resetAvailable(); // Reinicia o buffer de dados recebidos
     }
@@ -151,7 +157,7 @@ void loop() {
        
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
         // Configura o protocolo e comprimento do sinal
-       randomBitLength = 28; // Ajuste conforme necessário
+       randomBitLength = 24; // Ajuste conforme necessário
        randomProtocol = 1;   // Ajuste conforme necessário
   }
 
@@ -192,15 +198,14 @@ void loop() {
     // Função analizadora de frequencia e potencia _________________________ AOW POTENCIA
 
    if (digitalRead(BUTTON_PIN_UP) == LOW){
-    while (digitalRead(BUTTON_PIN_UP) == LOW) {
-        // Enquanto o botão de aumento de frequência estiver pressionado
 
-        // Limpa o display e exibe mensagem de análise
         display.clearDisplay();
         display.setCursor(0, 0);
         display.printf("Analyzing...");
         display.display();
-
+        
+    while (digitalRead(BUTTON_PIN_UP) == LOW) {
+        // Enquanto o botão de aumento de frequência estiver pressionado       
         int rssi;
         uint32_t detectedFrequency = 0;
         int detectedRssi = -100;
@@ -226,15 +231,15 @@ void loop() {
         if (detectedFrequency != 0) {
             display.clearDisplay();
             display.setCursor(0, 0);
-            display.printf("Analyzing...");
+            display.printf("Signal detected: ");
             display.setCursor(0, 10);
-            display.printf("Frequency: %.2fMHz", (float)detectedFrequency / 1000000.0);
+            display.printf("Frequency:%.2fMHz", (float)detectedFrequency / 1000000.0);
             display.setCursor(0, 20);
-            display.printf("RSSI: %ddBm", detectedRssi);
+            display.printf("RSSI:%ddBm", detectedRssi);
             display.display();
         }
 
-        delay(1000);
+        delay(600);
     }
     ELECHOUSE_cc1101.SetRx(); // Configura o módulo CC1101 para receber novamente
     mySwitch.disableTransmit(); // Desabilita a transmissão
