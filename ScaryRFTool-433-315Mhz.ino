@@ -260,7 +260,7 @@ void loop() {
     {
         display.clearDisplay();
         display.setCursor(0, 0);
-        display.println("Recebendo...");
+        display.println("RAW Wave:");
 
         // Lê continuamente os valores do pino RX e atualiza a forma de onda
         for (int i = 1; i < SCREEN_WIDTH; i++)
