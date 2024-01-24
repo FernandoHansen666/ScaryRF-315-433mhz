@@ -8,6 +8,7 @@
 #define TX_PIN 2         // Pino de transmissão
 #define BUTTON_PIN 14    // Pino do botão
 #define BUTTON_PIN_DIR 27    // Pino do botão
+#define BUTTON_PIN_ESQ 12    // Pino do botão
 #define BUTTON_PIN_UP 26    // Pino do botão
 #define FREQUENCY_SWITCH_PIN 13 // Pino do interruptor para mudar a frequência
 #define OLED_RESET 22    // Pino de reset do OLED
@@ -29,6 +30,10 @@ static const uint32_t subghz_frequency_list[] = {
     868350000, 915000000, 925000000  // Faixa 779-928 MHz
 };
 
+#define WAVEFORM_SAMPLES 128
+int waveform[WAVEFORM_SAMPLES] = {0};
+int waveformIndex = 0;
+
 void setup() {
   Serial.begin(115200);
 
@@ -36,6 +41,7 @@ void setup() {
   pinMode(FREQUENCY_SWITCH_PIN, INPUT_PULLUP); // Configura o pino do seletor de frequencia
   pinMode(BUTTON_PIN_UP, INPUT_PULLUP); // Configura o pino do botão cima como entrada com pull-up
   pinMode(BUTTON_PIN_DIR, INPUT_PULLUP); // Configura o pino do botão direito como entrada com pull-up
+  pinMode(BUTTON_PIN_ESQ, INPUT_PULLUP); // Configura o pino do botão esquerda como entrada com pull-up
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Inicializa o display OLED
     Serial.println(F("Falha ao iniciar o display OLED"));
@@ -246,9 +252,43 @@ void loop() {
     delay(100);
     mySwitch.enableReceive(RX_PIN); // Habilita a recepção
    }
-   
-    
-}
 
+
+   //RAW WAVEFORM________________________
+
+ while (digitalRead(BUTTON_PIN_ESQ) == LOW)
+    {
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.println("Recebendo...");
+
+        // Lê continuamente os valores do pino RX e atualiza a forma de onda
+        for (int i = 1; i < SCREEN_WIDTH; i++)
+        {         
+                int rssi = ELECHOUSE_cc1101.getRssi();
+                waveform[i] = map(rssi, -100, -40, 0, 1023); // Mapeia o RSSI para valores de forma de onda
+               
+
+            // Conecta os pixels consecutivos com uma linha
+            int prevY = map(waveform[i - 1], 0, 1023, SCREEN_HEIGHT, 0);
+            int currY = map(waveform[i], 0, 1023, SCREEN_HEIGHT, 0);
+
+            display.drawLine(i - 1, prevY, i, currY, SSD1306_WHITE);
+
+            display.display();
+            delay(30); //Controle da taxa de atualizaçao da tela
+
+            if (i == SCREEN_WIDTH){
+              display.clearDisplay();
+              i = 1;
+            }
+            
+            if (digitalRead(BUTTON_PIN_ESQ) != LOW){
+              break;
+            }
+        }
+
+        delay(500); // Aguarda um pouco antes de começar a próxima leitura
+    }
     
-  
+} //FIM LOOP
