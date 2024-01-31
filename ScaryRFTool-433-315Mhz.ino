@@ -256,36 +256,72 @@ void loop() {
 
    //RAW WAVEFORM________________________
 
- while (digitalRead(BUTTON_PIN_ESQ) == LOW)
+   while (digitalRead(BUTTON_PIN_ESQ) == LOW)
     {
-        display.clearDisplay();
-        display.setCursor(0, 0);
-        display.println("RAW Wave:");
+        display.clearDisplay(); 
+        float mhz = 0;       
 
         // Lê continuamente os valores do pino RX e atualiza a forma de onda
         for (int i = 1; i < SCREEN_WIDTH; i++)
-        {         
+        {            
+                           
                 int rssi = ELECHOUSE_cc1101.getRssi();
                 waveform[i] = map(rssi, -100, -40, 0, 1023); // Mapeia o RSSI para valores de forma de onda
+              
+             if(rssi < -75){              
+                 // Configura a frequência atual no módulo CC1101            
+                if(i  % 2 == 0){
+                  ELECHOUSE_cc1101.setMHZ(433.92);          
+                  ELECHOUSE_cc1101.SetRx();
+                  mhz = 433.92;
+                }
+                else{
+                  ELECHOUSE_cc1101.setMHZ(315);          
+                  ELECHOUSE_cc1101.SetRx();
+                  mhz = 315.00;
+                }
+            }
+            else{
+              display.fillRect(0, 0, 40, 7, SSD1306_BLACK);
+              display.setCursor(0, 0);
+              display.println(mhz);
+            }
+
+    
+             
                
 
             // Conecta os pixels consecutivos com uma linha
-            int prevY = map(waveform[i - 1], 0, 1023, SCREEN_HEIGHT, 0);
-            int currY = map(waveform[i], 0, 1023, SCREEN_HEIGHT, 0);
+            int prevY = map(waveform[i - 1], 0, 1023, SCREEN_HEIGHT - 1, 8); //Ponto anterior
+            int currY = map(waveform[i], 0, 1023, SCREEN_HEIGHT - 1, 8);     // prox ponto
 
-            display.drawLine(i - 1, prevY, i, currY, SSD1306_WHITE);
+            display.drawLine(i - 1, prevY, i, currY, SSD1306_WHITE); //liga os pontos
 
             display.display();
             delay(30); //Controle da taxa de atualizaçao da tela
 
             if (i == SCREEN_WIDTH){
               display.clearDisplay();
+              display.setCursor(0, 0);
+              display.println(mhz);
               i = 1;
             }
             
             if (digitalRead(BUTTON_PIN_ESQ) != LOW){
+//              if (tem raw no bufffer){
+//              display.fillRect(0, 0, 40, 7, SSD1306_BLACK);
+//              display.setCursor(0, 0);
+//              display.println("Press to Send RAW:");
+//              esperar açao de botao
+//                 if (botao para Baixo){
+//                    envia sinal
+//                  }
+//                 if (botao Esq){
+//                  break;
+//                 }
+//              }
               break;
-            }
+           }
         }
 
         delay(500); // Aguarda um pouco antes de começar a próxima leitura
