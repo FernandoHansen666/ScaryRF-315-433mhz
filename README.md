@@ -8,10 +8,10 @@ O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC110
 - **Módulo CC1101:** O rei da comunicação RF. (ele e um transceiver então recebe e envia no mesmo módulo, sem contar que pega uma faixa grande de SubGhz).
 - **Switches:** Um pra ligar e outro pra escolher a frequência.
 - **Botões de Pressão:** Pro futuro menu.
-- **Bateria:** 1300mAh, arrancada de um pod. (MrFreeze 2200Puffs).
-- **Placa Reguladora de Carga:** Também veio do pod. (Elfbar TE6000, a placa dele é muito boa).
+- **Bateria:** 1300mAh, arrancada de um pod descartavel.
+- **Placa Reguladora de Carga:** Aliexpress.
 - **Placa de Cobre:** Feita na forma old school, usando estampagem e corroída no percloreto de ferro.
-- **Tela OLED:** 128x32.
+- **Tela OLED:** 128x64.
 
 ## Recursos Principais
 - Pegar sinais RF com o módulo CC1101.
@@ -20,6 +20,8 @@ O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC110
 - Futuras funções com os 4 botões.
 - Identificar frequência do sinal (300-928Mhz).
 - Enviar um código aleatório (315-433Mhz).
+- Analizar e capturar o sinal em forma de Waveform
+- identificar frequência e sinal
 
 <img src="Placa.jpg" alt="Placa" width="300"><img src="Placa1.jpg" alt="Placa1" width="338">
 
