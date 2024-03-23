@@ -22,7 +22,6 @@ PS: O codigo da tela de 128*32 ta melhor comentado, mas logo vou arrumar o caos 
 - Identificar frequência do sinal (300-928Mhz).
 - Enviar um código aleatório (315-433Mhz).
 - Analizar e capturar o sinal em forma de Waveform
-- identificar frequência e sinal
 
 <img src="Placa.jpg" alt="Placa" width="300"><img src="Placa1.jpg" alt="Placa1" width="300">
 
