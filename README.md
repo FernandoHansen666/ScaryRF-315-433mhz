@@ -29,5 +29,15 @@ PS: O codigo da tela de 128*32 ta melhor comentado, mas logo vou arrumar o caos 
 
 <img src="PCB\SkemaSH1106.png" alt="Placa" width="600">
 
+## Futuros recursos
+
+To só estudando a possibilidade de fazer isso(ou fazer logo):
+
+- Captura de sinais RAW
+- Evil portal
+- Deauther
+- Bluetooth Spam
+- Rolljam Coop (você e o amiguinho)
+- Compartilhamento de arquivos via webservice (vou precisar colocar entrada de SD)
 
 
