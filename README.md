@@ -23,6 +23,10 @@ O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC110
 - Analizar e capturar o sinal em forma de Waveform
 - identificar frequência e sinal
 
-<img src="Placa.jpg" alt="Placa" width="300"><img src="Placa1.jpg" alt="Placa1" width="338">
+<img src="Placa.jpg" alt="Placa" width="300"><img src="Placa1.jpg" alt="Placa1" width="300">
+
+## Ligação de componentes
+
+<img src="Pcb/SkemaSH1106.jpg" alt="Placa" width="600">
 
 
