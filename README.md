@@ -27,6 +27,6 @@ O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC110
 
 ## Ligação de componentes
 
-<img src="Pcb/SkemaSH1106.jpg" alt="Placa" width="600">
+<img src="PCB/SkemaSH1106.jpg" alt="Placa" width="600">
 
 
