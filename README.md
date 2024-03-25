@@ -34,6 +34,7 @@ PS: O codigo da tela de 128*32 ta melhor comentado, mas logo vou arrumar o caos 
 To só estudando a possibilidade de fazer isso(ou fazer logo):
 
 - Captura de sinais RAW
+- Atualização OTA
 - Evil portal
 - Deauther
 - Bluetooth Spam
