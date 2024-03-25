@@ -31,7 +31,7 @@ PS: O codigo da tela de 128*32 ta melhor comentado, mas logo vou arrumar o caos 
 
 ## Futuros recursos
 
-To só estudando a possibilidade de fazer isso(ou fazer logo):
+To só estudando a possibilidade de fazer isso(ou fazer logo de uma vez):
 
 - Captura de sinais RAW
 - Atualização OTA
