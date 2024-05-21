@@ -40,5 +40,6 @@ To só estudando a possibilidade de fazer isso(ou fazer logo de uma vez):
 - Bluetooth Spam
 - Rolljam Coop (você e o amiguinho)
 - Compartilhamento de arquivos via webservice (vou precisar colocar entrada de SD)
+- Poder ser controlado por outros devices atraves do protocolo espNow
 
 
