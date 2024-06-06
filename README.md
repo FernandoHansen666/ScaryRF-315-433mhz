@@ -2,7 +2,6 @@
 
 ## Descrição
 O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC1101 e alguns componentes para criar uma ferramenta versátil de comunicação por rádio (RF). Com ela, você pode capturar e reproduzir sinais RF (o famoso Replay Attack) nas frequências de 315MHz ou 433.92MHz, enviar um código aleatório em 315-433Mhz e analisar qual frequêcia esta recebendo 300-928Mhz. Ainda vou adicionar mais funções usando os 4 botões de navegação, criando um menu com mais possibilidades usando radiofrequência. (O plano é esse, projeto tá em pré-alpha, né!)
-PS: O codigo da tela de 128*32 ta melhor comentado, mas logo vou arrumar o caos que ta meu codigo :D
 
 ## Hardware Usado
 - **ESP32:** O mais brabo.
