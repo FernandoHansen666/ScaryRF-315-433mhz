@@ -1,6 +1,3 @@
-#include "esp_system.h"
-#include "esp_intr_alloc.h"
-
 #include <U8g2lib.h>
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
 #include <RCSwitch.h>
@@ -9,54 +6,6 @@
 #include <NimBLEDevice.h>
 NimBLEAdvertising *pAdvertising;
 //BLE END
-
-//______________________EVILPORTAL__________________
-#include <SPIFFS.h>
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <WebServer.h>
-#include <DNSServer.h>
-#include <ESPmDNS.h>
-#include <FS.h>
-#include "google.h"
-#include "facebook.h"
-#include "erro.h"
-
-//#define LOGFILE "/log.txt"
- 
-// Ponto de acesso
-
-
-// Login da pagina de captura
-#define captivePortalPage FACEBOOK_HTML
-#define erroPage ERROPAGE_HTML
-// GOOGLE_HTML, FACEBOOK_HTML
-
-// Configuração básica usando configurações de rede comuns (porta DNS usual, IP e porta do servidor web)
-const byte DNS_PORT = 53;
-IPAddress apIP(200, 200, 200, 1);
-IPAddress netMsk(255, 255, 255, 0);
-DNSServer dnsServer;
-WebServer server(80);
-
-// Strings de buffer
-String webString="";
-String serialString="";
-
-int LED_ESP = 2;
-
-// Pisca o LED integrado numero de vezes
-void blink(int n)
-{
-  for(int i = 0; i < n; i++)
-  {
-    digitalWrite(LED_ESP, LOW);   
-    delay(250);                    
-    digitalWrite(LED_ESP, HIGH);  
-    delay(250);
-  }
-}
-//______________________________EVIL END____________
 
 
 #ifdef U8X8_HAVE_HW_I2C
@@ -279,17 +228,6 @@ struct menu_state current_state = { 0, menu_entry_list };
 void setup() { // ==============================SETUP=============================================
   Serial.begin(115200);
 
-//___ evil portal spiffs____________________________
-
-    Cache_Read_Enable(1);
-    
-    if (!SPIFFS.begin(true)){    
-    Serial.print("SPIFFS nao formatado. Formatando...");
-    SPIFFS.format();
-    SPIFFS.begin();
-  }
-  SPIFFS.end();
-//___ end portal spiffs_____________________________
 
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   pinMode(FREQUENCY_SWITCH_PIN, INPUT_PULLUP);
@@ -382,13 +320,9 @@ void loop() {
           }
         } //________ End RANDOM
         if (strcmp(current_state.menu[current_state.position].name, "Evil portal") == 0) { //Funçao Evil Portal
-          while (digitalRead(BUTTON_PIN_UP) != LOW) {
-            Serial.print("Rodando");
-            Evilsetup();
-            Serial.print("Meio");
-            Evilloop();
-            Serial.print("Fim");
-          }
+        u8g2.clearBuffer();
+        u8g2.setCursor(0, 10);
+        u8g2.print("In progress...");
         } //________ End Evil
         if (strcmp(current_state.menu[current_state.position].name, "BLE Spam") == 0) { //Funçao Spam
           while (digitalRead(BUTTON_PIN_UP) != LOW) {                      
