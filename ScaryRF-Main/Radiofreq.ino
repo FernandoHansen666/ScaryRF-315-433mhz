@@ -63,57 +63,188 @@ void Detect() {
 
     if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
       ELECHOUSE_cc1101.setMHZ(315);
+      mhz = 315.00;
     } else {
       ELECHOUSE_cc1101.setMHZ(433.92);
+      mhz = 433.92;
     }
 
   }
 }
 
-void Raw() {
-  if (digitalRead(BUTTON_PIN) == LOW) {
-    u8g2.clearBuffer();
-    float mhz = 0;
 
-    for (int i = 1; i < SCREEN_WIDTH; i++) {
+#define MAX_SAMPLES 600
+volatile unsigned long rawData[MAX_SAMPLES];
+volatile unsigned int dataPoints = 0;
+volatile unsigned long lastTime = 0;
+volatile bool signalState = false;
+
+void showCaptureInfo(float frequency, int rssi, int sampleCount) {
+  u8g2.clearBuffer();
+  
+  // Header
+  u8g2.setFont(u8g2_font_6x10_tf);
+  u8g2.drawUTF8(0, 10, "✅ Signal Captured");
+  u8g2.drawHLine(0, 12, 128);
+
+  // Main information
+  u8g2.setCursor(0, 25);
+  u8g2.print("Freq: ");
+  u8g2.print(frequency, 2);
+  u8g2.print(" MHz");
+
+  u8g2.setCursor(0, 37);
+  u8g2.print("Power: ");
+  u8g2.print(rssi);
+  u8g2.print(" dBm");
+
+  u8g2.setCursor(0, 49);
+  u8g2.print("Samples: ");
+  u8g2.print(sampleCount);
+
+  // Footer
+  u8g2.setFont(u8g2_font_5x7_tf);
+  u8g2.setCursor(0, 63);
+  u8g2.print("DIR:Repeat | BTN:New Capture");
+
+  u8g2.sendBuffer();
+}
+
+void retransmitSignal(float mhz) {
+  ELECHOUSE_cc1101.SetTx();
+  delay(15); // Stabilization time
+  
+  bool txState = HIGH; // Initial state always HIGH
+  digitalWrite(TX_PIN, txState);
+  
+  for (unsigned int i = 0; i < dataPoints; i++) {
+    unsigned long pulseDuration = rawData[i];
+    unsigned long startTime = micros();
+    
+    // Send pulse with precise timing
+    delayMicroseconds(pulseDuration - 12); // Compensate overhead
+    txState = !txState;
+    digitalWrite(TX_PIN, txState);
+    
+    // Ensure exact pulse duration
+    while (micros() - startTime < pulseDuration) {}
+  }
+  
+  digitalWrite(TX_PIN, LOW);
+  ELECHOUSE_cc1101.SetRx();
+  
+  // Quick feedback
+  u8g2.clearBuffer();
+  u8g2.setCursor(0, 30);
+  u8g2.print("Signal retransmitted!");
+  u8g2.sendBuffer();
+  delay(300);
+}
+
+void Raw() {
+  while (true) {
+    // Set initial frequency
+    float mhz = (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) ? 315.00 : 433.92;
+    ELECHOUSE_cc1101.setMHZ(mhz);
+    ELECHOUSE_cc1101.SetRx();
+    
+    // Wait for capture button
+    while (digitalRead(BUTTON_PIN) == HIGH) {
+      if (digitalRead(BUTTON_PIN_UP) == LOW) return;
+      delay(10);
+    }
+    
+    // Prepare new capture
+    u8g2.clearBuffer();
+    dataPoints = 0;
+    lastTime = 0;
+    signalState = false;
+    
+    // Setup interrupt
+    attachInterrupt(digitalPinToInterrupt(RX_PIN), []{
+      unsigned long now = micros();
+      if (lastTime > 0) {
+        unsigned long duration = now - lastTime;
+        if (duration > 20 && duration < 100000 && dataPoints < MAX_SAMPLES) {
+          rawData[dataPoints++] = duration;
+          signalState = !signalState;
+        }
+      }
+      lastTime = now;
+    }, CHANGE);
+
+    // Capture loop with waveform
+    int i = 1;
+    while (digitalRead(BUTTON_PIN) == LOW) {
+      if (digitalRead(BUTTON_PIN_UP) == LOW) {
+        detachInterrupt(digitalPinToInterrupt(RX_PIN));
+        return;
+      }
+      
+      // Check frequency change
+      float newMhz = (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) ? 315.00 : 433.92;
+      if (newMhz != mhz) {
+        mhz = newMhz;
+        ELECHOUSE_cc1101.setMHZ(mhz);
+        ELECHOUSE_cc1101.SetRx();
+      }
+      
+      // Update waveform
       int rssi = ELECHOUSE_cc1101.getRssi();
       waveform[i] = map(rssi, -100, -40, 0, 1023);
-
-      if (rssi < -75) {
-        if (i % 2 == 0) {
-          ELECHOUSE_cc1101.setMHZ(433.92);
-          ELECHOUSE_cc1101.SetRx();
-          mhz = 433.92;
-        } else {
-          ELECHOUSE_cc1101.setMHZ(315);
-          ELECHOUSE_cc1101.SetRx();
-          mhz = 315.00;
-        }
-      } else {
-        u8g2.setCursor(0, 7);
-        u8g2.print(mhz);
-      }
-
+      
+      // Display information
+      u8g2.setCursor(0, 7);
+      u8g2.print(mhz, 2);
+      u8g2.print("MHz ");
+      u8g2.print(rssi);
+      u8g2.print("dBm");
+      
+      // Draw waveform
       int prevY = map(waveform[i - 1], 0, 1023, SCREEN_HEIGHT - 13, 8);
       int currY = map(waveform[i], 0, 1023, SCREEN_HEIGHT - 13, 8);
       u8g2.drawLine(i - 1, prevY, i, currY);
-
       u8g2.sendBuffer();
-      delay(30);
-
-      if (i == SCREEN_WIDTH && mhz != 0) {
+      
+      i++;
+      if (i >= SCREEN_WIDTH) {
         u8g2.clearBuffer();
-        u8g2.setCursor(0, 7);
-        u8g2.print(mhz);
         i = 1;
       }
-
-      if (digitalRead(BUTTON_PIN) != LOW) {
-        break;
-      }
+      
+      delay(30);
     }
 
-    delay(500);
+    // Finish capture
+    detachInterrupt(digitalPinToInterrupt(RX_PIN));
+
+    // Process results
+    if (dataPoints > 0) {
+      showCaptureInfo(mhz, ELECHOUSE_cc1101.getRssi(), dataPoints);
+
+      // Multiple retransmission loop
+      while (true) {
+        if (digitalRead(BUTTON_PIN_UP) == LOW) return;
+        
+        if (digitalRead(BUTTON_PIN) == LOW) {
+          delay(50);
+          break; // Exit for new capture
+        }
+        
+        if (digitalRead(BUTTON_PIN_DIR) == LOW) {
+          delay(50); // Debounce
+          retransmitSignal(mhz);
+        }
+        
+        delay(10);
+      }
+    } else {
+      u8g2.clearBuffer();
+      u8g2.setCursor(0, 30);
+      u8g2.print("No signal captured!");
+      u8g2.sendBuffer();
+      delay(1000);
+    }
   }
 }
 
@@ -171,8 +302,10 @@ void SendRandom() {
 
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
     ELECHOUSE_cc1101.setMHZ(315);
+    mhz = 315.00;
   } else {
     ELECHOUSE_cc1101.setMHZ(433.92);
+    mhz = 433.92;
   }
 
   u8g2.clearBuffer();
@@ -183,11 +316,11 @@ void SendRandom() {
 
   unsigned long randomValue = 100000000 + random(900000000);
   int randomBitLength = 28;
-  int randomProtocol = 6;
+  int randomProtocol = 0 + random(12);
 
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
     randomBitLength = 24;
-    randomProtocol = 1;
+    randomProtocol = 0 + random(12);
   }
 
   mySwitch.disableReceive();
@@ -201,6 +334,8 @@ void SendRandom() {
   u8g2.setCursor(0, 20);
   u8g2.print(randomValue);
   u8g2.setCursor(0, 30);
+  u8g2.print(randomProtocol);
+  u8g2.setCursor(0, 40);
   u8g2.print("Sending...");
   u8g2.sendBuffer();
 

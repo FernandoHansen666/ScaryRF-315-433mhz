@@ -7,6 +7,9 @@
 NimBLEAdvertising *pAdvertising;
 //BLE END
 
+//Wifi
+#include <WiFi.h>
+#include <esp_wifi.h>
 
 #ifdef U8X8_HAVE_HW_I2C
 #include <Wire.h>
@@ -122,6 +125,7 @@ unsigned long receivedValue = 0;
 int receivedBitLength = 0;
 int receivedProtocol = 0;
 const int rssi_threshold = -75;
+float mhz;
 
 static const uint32_t subghz_frequency_list[] = {
   300000000, 303875000, 304250000, 310000000, 315000000, 318000000,
@@ -255,8 +259,10 @@ void setup() { // ==============================SETUP===========================
 
   if (digitalRead(FREQUENCY_SWITCH_PIN) == LOW) {
     ELECHOUSE_cc1101.setMHZ(315);
+    mhz = 315.00;
   } else {
     ELECHOUSE_cc1101.setMHZ(433.92);
+    mhz = 433.00;
   }
 
   ELECHOUSE_cc1101.SetRx();
@@ -306,6 +312,7 @@ void loop() {
             Raw();
           }
         }
+        //________ End RAW
         if (strcmp(current_state.menu[current_state.position].name, "Analyser") == 0) { //Funçao Analyser
           while (digitalRead(BUTTON_PIN_UP) != LOW) {
             Analyser();     
@@ -319,7 +326,12 @@ void loop() {
             }
           }
         } //________ End RANDOM
-        if (strcmp(current_state.menu[current_state.position].name, "Evil portal") == 0) { //Funçao Evil Portal
+        if (strcmp(current_state.menu[current_state.position].name, "Deauther") == 0) { //Funçao Deauther
+        while (digitalRead(BUTTON_PIN_UP) != LOW) {
+            Deauther();
+        }
+        }//________ End Deauther
+        if (strcmp(current_state.menu[current_state.position].name, "Evil portal") == 0) { //Funçao EVIL PORTAL
         u8g2.clearBuffer();
         u8g2.setCursor(0, 10);
         u8g2.print("In progress...");
