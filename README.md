@@ -32,11 +32,11 @@ O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC110
 
 To só estudando a possibilidade de fazer isso(ou fazer logo de uma vez):
 
-- Captura de sinais RAW
+- ~~Captura de sinais RAW~~
 - Atualização OTA
 - Evil portal
 - Deauther
-- Bluetooth Spam
+- Bluetooth Spam (Atualizar)
 - Rolljam Coop (você e o amiguinho)
 - Compartilhamento de arquivos via webservice (vou precisar colocar entrada de SD)
 - Poder ser controlado por outros devices atraves do protocolo espNow
