@@ -166,7 +166,13 @@ void Raw() {
       if (lastTime > 0) {
         unsigned long duration = now - lastTime;
         if (duration > 20 && duration < 100000 && dataPoints < MAX_SAMPLES) {
-          rawData[dataPoints++] = duration;
+          //rawData[dataPoints++] = duration;
+          //Teste
+          uint16_t idx = dataPoints;
+          dataPoints = idx + 1;
+          rawData[idx] = duration;
+          //End Teste
+
           signalState = !signalState;
         }
       }
