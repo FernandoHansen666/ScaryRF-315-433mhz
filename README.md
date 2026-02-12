@@ -121,10 +121,11 @@ Always comply with your local laws and regulations when working with radio frequ
 - [x] RAW capture  
 - [x] Deauther  
 - [ ] BLE spam improvements  
-- [ ] Rolljam cooperative mode  
-- [ ] Web-based file sharing  
-- [ ] ESP-NOW remote control  
+- [ ] Rolljam cooperative mode (you and another Scary-RF)  
+- [ ] Web-based file sharing (share captures)  
+- [ ] ESP-NOW remote control (control Scary-RF from other devices)  
 - [ ] Improved frequency analyzer  
+
 
 ---
 
