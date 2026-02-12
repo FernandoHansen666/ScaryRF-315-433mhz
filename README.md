@@ -1,44 +1,166 @@
-# Scary-RF Tool
+# Scary-RF
 
-## Descrição
-O Scary-RF Tool é um projeto raiz de Arduino, usando um ESP32, um módulo CC1101 e alguns componentes para criar uma ferramenta versátil de comunicação por rádio (RF). Com ela, você pode capturar e reproduzir sinais RF (o famoso Replay Attack) nas frequências de 315MHz ou 433.92MHz, enviar um código aleatório em 315-433Mhz e analisar qual frequêcia esta recebendo 300-928Mhz. Ainda vou adicionar mais funções usando os 4 botões de navegação, criando um menu com mais possibilidades usando radiofrequência. (O plano é esse, projeto tá em pré-alpha, né!)
+<p align="center">
+  <img src="Placa.jpg" height="600"/>
+  <img src="Scary_gif.gif" width="406"/>
+</p>
 
-## Hardware Usado
-- **ESP32:** O mais brabo.
-- **Módulo CC1101:** O rei da comunicação RF. (ele e um transceiver então recebe e envia no mesmo módulo, sem contar que pega uma faixa grande de SubGhz).
-- **Switches:** Um pra ligar e outro pra escolher a frequência.
-- **Botões de Pressão:** Pro futuro menu.
-- **Bateria:** 700mAh.
-- **Placa Reguladora de Carga:** Aliexpress.
-- **Placa de Cobre:** Feita na forma old school, usando estampagem e corroída no percloreto de ferro.
-- **Tela OLED:** 128x64. (SH1106 1.3")
+<p align="center">
+  <b>Low-cost • Open-Source • ESP32 + CC1101 • Sub-GHz RF Tool</b>
+</p>
 
-## Recursos Principais
-- Pegar sinais RF com o módulo CC1101.
-- Mostrar dados em um display OLED.
-- Mandar de volta sinais RF na mesma frequência ou em outra.
-- Identificar frequência do sinal (300-928Mhz).
-- Enviar um código aleatório (315-433Mhz).
-- Ver waveform e capturar sinal em RAW
-- Enviar BleSpam
+---
 
-<img src="Placa.jpg" alt="Placa" width="300"><img src="Placa1.jpg" alt="Placa1" width="300">
+## 📡 Overview
 
-## Ligação de componentes
+The **Scary-RF Tool** is a low-cost, open-source Sub-GHz RF research device built using an **ESP32** and a **CC1101 transceiver**.
 
-<img src="PCB\SkemaSH1106.png" alt="Placa" width="600">
+It is designed for:
 
-## Futuros recursos
+- RF signal capture  
+- Replay testing (Replay Attack)  
+- Frequency analysis  
+- RAW waveform visualization  
+- Signal storage and playback  
 
-To só estudando a possibilidade de fazer isso(ou fazer logo de uma vez):
+This project focuses on **educational, experimental, and RF research purposes**.
 
-- ~~Captura de sinais RAW~~
-- Atualização OTA
-- Evil portal
-- Deauther
-- Bluetooth Spam (Atualizar)
-- Rolljam Coop (você e o amiguinho)
-- Compartilhamento de arquivos via webservice (vou precisar colocar entrada de SD)
-- Poder ser controlado por outros devices atraves do protocolo espNow
+---
+
+## ⚠️ Disclaimer
+
+This project is intended for **educational and research purposes only**.
+
+The author is not responsible for misuse, illegal activities, or damage caused by this device.
+
+Always comply with your local laws and regulations when working with radio frequency transmissions.
+
+---
+
+## 🛠 Hardware
+
+### Core Components
+
+- **ESP32** (multiple versions supported)
+- **CC1101 Sub-GHz Transceiver**
+- **1.3” OLED Display (SH1106 128x64)**
+- **MicroSD Card Module**
+- Push Buttons (navigation)
+- Power Switch
+- Frequency Selection Switch (315 / 433 MHz)
+- Lithium Battery (recycled or new)
+- Charging Regulator Board
+- Custom etched copper PCB
+
+---
 
 
+## 🚀 Features
+
+- 📡 Capture RF signals (315 / 433 MHz)
+- 🔁 Replay captured signals
+- 💾 Save and delete captures on SD card
+- 📊 RAW waveform capture and visualization
+- 🔍 Frequency identification (300–928 MHz)
+- 🎲 Random code transmission (315–433 MHz)
+- 📟 OLED real-time display
+- 📢 BLE spam transmission
+
+---
+
+## 🔌 Hardware Pinout (ESP32)
+
+| Component      | Pin | Function                        |
+|---------------|------|--------------------------------|
+| CC1101 RX     | 4    | RF Data Reception              |
+| CC1101 TX     | 2    | RF Data Transmission           |
+| SD CS         | 17   | Chip Select                    |
+| SD MISO       | 34   | SPI MISO                       |
+| SD MOSI       | 13   | SPI MOSI                       |
+| SD SCK        | 14   | SPI Clock                      |
+| BTN UP        | 27   | Navigate / Exit                |
+| BTN DOWN      | 25   | Navigate / Save                |
+| BTN LEFT      | 26   | Navigate / Library             |
+| BTN RIGHT     | 32   | Navigate / Delete              |
+| BTN OK        | 33   | Select / Transmit              |
+| FREQ SWITCH   | 12   | 315 / 433 MHz Selector         |
+
+---
+
+## 💻 Installation
+
+### Requirements
+
+- Arduino IDE or PlatformIO
+- ESP32 Board Package
+- Required libraries:
+  - ELECHOUSE_CC1101
+  - Adafruit_SH1106 (or SH1106 compatible)
+  - SD
+  - SPI
+  - Wire
+
+### Flashing
+
+1. Connect ESP32 via USB  
+2. Select correct board  
+3. Compile and upload firmware  
+4. Insert SD card  
+5. Power on device  
+
+---
+
+## 🗂 Project Structure
+
+```
+/firmware
+/hardware
+  /schematics
+  /pcb
+/images
+README.md
+```
+
+---
+
+## 🧠 Roadmap
+
+- [x] RAW capture  
+- [x] Deauther  
+- [ ] BLE spam improvements  
+- [ ] Rolljam cooperative mode  
+- [ ] Web-based file sharing  
+- [ ] ESP-NOW remote control  
+- [ ] Improved frequency analyzer  
+
+---
+
+## 🔬 Intended Use Cases
+
+- RF security research  
+- Remote control protocol analysis  
+- Sub-GHz experimentation  
+- Learning about radio communication  
+- Embedded systems development  
+
+---
+
+## 📜 License
+
+This project is open-source.
+
+You are free to modify, improve, and distribute it under the chosen license.
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome.
+
+If you find bugs or want to improve features, feel free to open an issue.
+
+---
+
+<p align="center">
+  Built with ESP32, curiosity, and a bit of chaos 👻
+</p>
