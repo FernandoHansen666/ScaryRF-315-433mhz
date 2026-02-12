@@ -1,8 +1,8 @@
 # Scary-RF
 
 <p align="center">
-  <img src="Placa.jpg" width="400"/>
-  <img src="Scary_gif.gif" width="400"/>
+  <img src="Placa.jpg" height="450"/>
+  <img src="Scary_gif.gif" height="450"/>
 </p>
 
 <p align="center">
