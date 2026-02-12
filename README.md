@@ -110,16 +110,9 @@ Always comply with your local laws and regulations when working with radio frequ
 
 ---
 
-## 🗂 Project Structure
+## 🗂 PCB Wires
 
-```
-/firmware
-/hardware
-  /schematics
-  /pcb
-/images
-README.md
-```
+  <img src="PCB/SkemaSD-SH1106.png"/>
 
 ---
 
